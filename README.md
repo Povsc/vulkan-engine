@@ -1,4 +1,4 @@
-clang++# vulkan-engine
+# vulkan-engine
 Vulkan engine ramp-up project 
 
 TODO: this readme 
