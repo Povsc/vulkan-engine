@@ -1,0 +1,68 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": { "major": 3, "minor": 28, "patch": 0 },
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_COMPILER": "clang++"
+      }
+    },
+    {
+      "name": "windows",
+      "hidden": true,
+      "inherits": "base",
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Windows" }
+    },
+    {
+      "name": "linux",
+      "hidden": true,
+      "inherits": "base",
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Linux" }
+    },
+    {
+      "name": "win-clang-debug",
+      "displayName": "Windows clang Debug",
+      "inherits": "windows",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug" }
+    },
+    {
+      "name": "win-clang-relwithdebinfo",
+      "displayName": "Windows clang RelWithDebInfo (profiling)",
+      "inherits": "windows",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "RelWithDebInfo" }
+    },
+    {
+      "name": "win-clang-release",
+      "displayName": "Windows clang Release",
+      "inherits": "windows",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" }
+    },
+    {
+      "name": "win-clang-asan",
+      "displayName": "Windows clang ASan (RelWithDebInfo)",
+      "description": "ASan on Windows needs the release CRT, so it is paired with RelWithDebInfo rather than Debug.",
+      "inherits": "windows",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "RelWithDebInfo", "ENABLE_ASAN": "ON" }
+    },
+    {
+      "name": "linux-clang-debug",
+      "displayName": "Linux clang Debug (WSL / cloud agents)",
+      "inherits": "linux",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug", "ENABLE_ASAN": "ON" }
+    }
+  ],
+  "buildPresets": [
+    { "name": "win-clang-debug", "configurePreset": "win-clang-debug" },
+    { "name": "win-clang-relwithdebinfo", "configurePreset": "win-clang-relwithdebinfo" },
+    { "name": "win-clang-release", "configurePreset": "win-clang-release" },
+    { "name": "win-clang-asan", "configurePreset": "win-clang-asan" },
+    { "name": "linux-clang-debug", "configurePreset": "linux-clang-debug" }
+  ]
+}

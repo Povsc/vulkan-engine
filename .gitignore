@@ -1,0 +1,10 @@
+build/
+out/
+.vs/
+.cache/
+vcpkg_installed/
+CMakeUserPresets.json
+CMakeCache.txt
+CMakeFiles/
+*.rdc
+AGENTS.md

@@ -1,0 +1,11 @@
+{
+  "name": "vkrenderer",
+  "version-string": "0.1.0",
+  "builtin-baseline": "b61d33065508ba0d5e393206abb3cb2366299699",
+  "dependencies": [
+    "glfw3",
+    "glm",
+    "stb",
+    "tinyobjloader"
+  ]
+}
