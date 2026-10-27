@@ -16,6 +16,14 @@ import vulkan_hpp;
 constexpr uint32_t WINDOW_WIDTH = 800;
 constexpr uint32_t WINDOW_HEIGHT = 600;
 
+#ifdef NDEBUG
+constexpr bool enableValidationLayers = false;
+#else
+constexpr bool enableValidationLayers = true;
+#endif
+
+const std::vector<char const*> validationLayers = {"VK_LAYER_KHRONOS_validation"};
+
 class HelloTriangleApplication {
   public:
     void run() {
@@ -34,7 +42,8 @@ class HelloTriangleApplication {
         window_ = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "Vulcão", nullptr, nullptr);
     }
 
-    void initVulkan() { createInstance();
+    void initVulkan() { 
+        createInstance();
     }
 
     void mainLoop() { 
@@ -55,26 +64,61 @@ class HelloTriangleApplication {
                                               .engineVersion = VK_MAKE_VERSION(1, 0, 0),
                                               .apiVersion = vk::ApiVersion14};
 
+        auto requiredExtensions = getRequiredInstanceExtensions();
+        auto requiredValidationLayers = getRequiredValidationLayers();
+
+        vk::InstanceCreateInfo createInfo{.pApplicationInfo = &appInfo,
+                                          .enabledLayerCount = static_cast<uint32_t>(requiredValidationLayers.size()),
+                                          .ppEnabledLayerNames  = requiredValidationLayers.data(),
+                                          .enabledExtensionCount = static_cast<uint32_t>(requiredExtensions.size()),
+                                          .ppEnabledExtensionNames = requiredExtensions.data()};
+
+        instance_ = vk::raii::Instance(context_, createInfo);
+    }
+
+    std::vector<const char*> getRequiredInstanceExtensions() {
         // get required extensions from GLFW (needed since vk is platform agnostic)
         uint32_t glfwExtensionCount = 0;
         auto glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
 
+        std::vector requiredExtensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
+
         // check if extensions are supported by Vulkan implementation
         auto extensionProperties = context_.enumerateInstanceExtensionProperties();
-        for (uint32_t i = 0; i < glfwExtensionCount; i++) {
-            if (std::ranges::none_of(extensionProperties, 
-                [glfwExtension = glfwExtensions[i]](auto const& extensionProperty) {
-                                              return strcmp(extensionProperty.extensionName, glfwExtension) == 0;
-                                          })) {
-                throw std::runtime_error("Required GLFW extension not supported: " + std::string(glfwExtensions[i]));
-            }
+        auto unsupportedPropertyIt =
+            std::ranges::find_if(requiredExtensions, [&extensionProperties](auto const& requiredExtension) {
+                return std::ranges::none_of(extensionProperties, [requiredExtension](auto const& extensionProperty) {
+                    return strcmp(extensionProperty.extensionName, requiredExtension) == 0;
+                });
+            });
+
+        if (unsupportedPropertyIt != requiredExtensions.end()) {
+            throw std::runtime_error("Required extension not supported: " + std::string(*unsupportedPropertyIt));
         }
 
-        vk::InstanceCreateInfo createInfo{.pApplicationInfo = &appInfo,
-                                          .enabledExtensionCount = glfwExtensionCount,
-                                          .ppEnabledExtensionNames = glfwExtensions};
+        return requiredExtensions;
+    }
 
-        instance_ = vk::raii::Instance(context_, createInfo);
+    std::vector<const char*> getRequiredValidationLayers() {
+        // get required layers
+        std::vector<char const*> requiredLayers;
+        if (enableValidationLayers) {
+            requiredLayers.assign(validationLayers.begin(), validationLayers.end());
+        }
+
+        // check if the required layers are supported by Vulkan implementation.
+        auto layerProperties = context_.enumerateInstanceLayerProperties();
+        auto unsupportedLayerIt = std::ranges::find_if(requiredLayers, [&layerProperties](auto const& requiredLayer) {
+            return std::ranges::none_of(layerProperties, [requiredLayer](auto const& layerProperty) {
+                return strcmp(layerProperty.layerName, requiredLayer) == 0;
+            });
+        });
+
+        if (unsupportedLayerIt != requiredLayers.end()) {
+            throw std::runtime_error("Required layer not supported: " + std::string(*unsupportedLayerIt));
+        }
+
+        return requiredLayers;
     }
 
     GLFWwindow* window_;
