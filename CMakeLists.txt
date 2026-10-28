@@ -16,14 +16,22 @@ find_package(glm CONFIG REQUIRED)
 find_package(tinyobjloader CONFIG REQUIRED)
 find_package(Stb REQUIRED)
 
-add_executable(vkrenderer src/main.cpp)
+add_executable(vkrenderer
+    src/main.cpp
+    src/app.cpp
+    src/vulkan/instance.cpp
+    src/vulkan/device.cpp
+)
 target_compile_features(vkrenderer PRIVATE cxx_std_20)
 target_compile_options(vkrenderer PRIVATE -Wall -Wextra -Wpedantic -Wshadow)
 target_compile_definitions(vkrenderer PRIVATE
     VULKAN_HPP_NO_STRUCT_CONSTRUCTORS=1
     VULKAN_HPP_DISPATCH_LOADER_DYNAMIC=1
 )
-target_include_directories(vkrenderer PRIVATE ${Stb_INCLUDE_DIR})
+target_include_directories(vkrenderer PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/src"
+    ${Stb_INCLUDE_DIR}
+)
 target_link_libraries(vkrenderer PRIVATE
     Vulkan::Vulkan
     glfw
