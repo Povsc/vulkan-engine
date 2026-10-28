@@ -44,6 +44,7 @@ class HelloTriangleApplication {
 
     void initVulkan() { 
         createInstance();
+        setupDebugMessenger();
     }
 
     void mainLoop() { 
@@ -56,6 +57,23 @@ class HelloTriangleApplication {
         glfwDestroyWindow(window_);
         glfwTerminate();
     }
+
+    void setupDebugMessenger() {
+        if (!enableValidationLayers) return;
+
+        // TODO: add runtime flag(?) to display more verbose output (think glog)
+        vk::DebugUtilsMessageSeverityFlagsEXT severityFlags(vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning |
+                                                            vk::DebugUtilsMessageSeverityFlagBitsEXT::eError);
+        vk::DebugUtilsMessageTypeFlagsEXT messageTypeFlags(vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral |
+                                                           vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance |
+                                                           vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation);
+        vk::DebugUtilsMessengerCreateInfoEXT debugUtilsMessengerCreateInfoEXT{
+            .messageSeverity = severityFlags, .messageType = messageTypeFlags, .pfnUserCallback = &debugCallback};
+
+        debugMessenger = instance_.createDebugUtilsMessengerEXT(debugUtilsMessengerCreateInfoEXT);
+
+    }
+
 
     void createInstance() {
         constexpr vk::ApplicationInfo appInfo{.pApplicationName = "Hello Triangle",
@@ -82,6 +100,11 @@ class HelloTriangleApplication {
         auto glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
 
         std::vector requiredExtensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
+
+        // conditionally add extension for annotated callbacks from validation layers
+        if (enableValidationLayers) {
+            requiredExtensions.push_back(vk::EXTDebugUtilsExtensionName);
+        }
 
         // check if extensions are supported by Vulkan implementation
         auto extensionProperties = context_.enumerateInstanceExtensionProperties();
@@ -121,10 +144,19 @@ class HelloTriangleApplication {
         return requiredLayers;
     }
 
+    static VKAPI_ATTR vk::Bool32 VKAPI_CALL debugCallback(vk::DebugUtilsMessageSeverityFlagBitsEXT severity,
+                                                          vk::DebugUtilsMessageTypeFlagsEXT type,
+                                                          const vk::DebugUtilsMessengerCallbackDataEXT* pCallbackData,
+                                                          void* pUserData) {
+        std::cerr << "validation layer: type " << to_string(type) << " msg: " << pCallbackData->pMessage << std::endl;
+        return vk::False;
+    }
+
     GLFWwindow* window_;
 
     vk::raii::Context context_;
     vk::raii::Instance instance_ = nullptr;
+    vk::raii::DebugUtilsMessengerEXT debugMessenger = nullptr;
 };
 
 int main() {
