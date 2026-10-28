@@ -12,17 +12,19 @@ import vulkan_hpp;
 #include <stdexcept>
 #include <algorithm>
 #include <string>
+#include <map>
 
 constexpr uint32_t WINDOW_WIDTH = 800;
 constexpr uint32_t WINDOW_HEIGHT = 600;
 
 #ifdef NDEBUG
-constexpr bool enableValidationLayers = false;
+constexpr bool DEBUG = false;
 #else
-constexpr bool enableValidationLayers = true;
+constexpr bool DEBUG = true;
 #endif
 
 const std::vector<char const*> validationLayers = {"VK_LAYER_KHRONOS_validation"};
+const std::vector<const char*> requiredDeviceExtension = {vk::KHRSwapchainExtensionName};
 
 class HelloTriangleApplication {
   public:
@@ -45,6 +47,7 @@ class HelloTriangleApplication {
     void initVulkan() { 
         createInstance();
         setupDebugMessenger();
+        pickPhysicalDevice();
     }
 
     void mainLoop() { 
@@ -59,7 +62,7 @@ class HelloTriangleApplication {
     }
 
     void setupDebugMessenger() {
-        if (!enableValidationLayers) return;
+        if (!DEBUG) return;
 
         // TODO: add runtime flag(?) to display more verbose output (think glog)
         vk::DebugUtilsMessageSeverityFlagsEXT severityFlags(vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning |
@@ -70,7 +73,7 @@ class HelloTriangleApplication {
         vk::DebugUtilsMessengerCreateInfoEXT debugUtilsMessengerCreateInfoEXT{
             .messageSeverity = severityFlags, .messageType = messageTypeFlags, .pfnUserCallback = &debugCallback};
 
-        debugMessenger = instance_.createDebugUtilsMessengerEXT(debugUtilsMessengerCreateInfoEXT);
+        debugMessenger_ = instance_.createDebugUtilsMessengerEXT(debugUtilsMessengerCreateInfoEXT);
 
     }
 
@@ -94,6 +97,77 @@ class HelloTriangleApplication {
         instance_ = vk::raii::Instance(context_, createInfo);
     }
 
+    void pickPhysicalDevice() { 
+        auto physicalDevices = instance_.enumeratePhysicalDevices();
+
+        if (DEBUG) {
+            std::cout << "Physical devices available: \n";
+            for (const auto& physicalDevice : physicalDevices) {
+                std::cout << " * " << physicalDevice.getProperties().deviceName << "\n";
+            }
+        }
+
+        std::multimap<int, vk::raii::PhysicalDevice> candidates;
+
+        // if many discrete GPUs this could get annoying, but good enough for now
+        for (const auto& physicalDevice : physicalDevices) {
+            if (!isDeviceSuitable(physicalDevice)) {
+                continue;
+            }
+
+            auto deviceProperties = physicalDevice.getProperties();
+            // auto deviceFeatures = physicalDevice.getFeatures();
+            uint32_t score = 0;
+
+            // heavily favor discrete GPU
+            if (deviceProperties.deviceType == vk::PhysicalDeviceType::eDiscreteGpu) {
+                score += 1000;
+            }
+
+            score += deviceProperties.limits.maxImageDimension2D;
+
+            candidates.insert(std::make_pair(score, physicalDevice));
+        }
+
+        if (!candidates.empty() && candidates.rbegin()->first > 0) {
+            physicalDevice_ = candidates.rbegin()->second;
+        } else {
+            throw std::runtime_error("failed to find GPUs with Vulkan support!");
+        }
+    }
+
+    bool isDeviceSuitable(vk::raii::PhysicalDevice const& physicalDevice) {
+        bool supportsVulkan1_3 = physicalDevice.getProperties().apiVersion >= vk::ApiVersion13;
+
+        // could be advantageous in the future to check if other queue families are supported
+        auto queueFamilies = physicalDevice.getQueueFamilyProperties();
+        bool supportsGraphics = std::ranges::any_of(
+            queueFamilies, [](auto const& qfp) { return !!(qfp.queueFlags & vk::QueueFlagBits::eGraphics); });
+
+        // check if required physicalDevice extensions are available
+        auto availableDeviceExtensions = physicalDevice.enumerateDeviceExtensionProperties();
+        bool supportsAllRequiredExtensions = std::ranges::all_of(
+            requiredDeviceExtension, [&availableDeviceExtensions](auto const& requiredDeviceExtension) {
+                return std::ranges::any_of(
+                    availableDeviceExtensions, [requiredDeviceExtension](auto const& availableDeviceExtension) {
+                        return strcmp(availableDeviceExtension.extensionName, requiredDeviceExtension) == 0;
+                    });
+            });
+
+        // check if the physicalDevice supports the required features (shader draw parameters, dynamic rendering and
+        // extended dynamic state)
+        auto features =
+            physicalDevice.template getFeatures2<vk::PhysicalDeviceFeatures2, vk::PhysicalDeviceVulkan11Features,
+                                                 vk::PhysicalDeviceVulkan13Features,
+                                                 vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT>();
+        bool supportsRequiredFeatures =
+            features.template get<vk::PhysicalDeviceVulkan11Features>().shaderDrawParameters &&
+            features.template get<vk::PhysicalDeviceVulkan13Features>().dynamicRendering &&
+            features.template get<vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT>().extendedDynamicState;
+
+        return supportsVulkan1_3 && supportsGraphics && supportsAllRequiredExtensions && supportsRequiredFeatures;
+    }
+
     std::vector<const char*> getRequiredInstanceExtensions() {
         // get required extensions from GLFW (needed since vk is platform agnostic)
         uint32_t glfwExtensionCount = 0;
@@ -102,7 +176,7 @@ class HelloTriangleApplication {
         std::vector requiredExtensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
 
         // conditionally add extension for annotated callbacks from validation layers
-        if (enableValidationLayers) {
+        if (DEBUG) {
             requiredExtensions.push_back(vk::EXTDebugUtilsExtensionName);
         }
 
@@ -125,7 +199,7 @@ class HelloTriangleApplication {
     std::vector<const char*> getRequiredValidationLayers() {
         // get required layers
         std::vector<char const*> requiredLayers;
-        if (enableValidationLayers) {
+        if (DEBUG) {
             requiredLayers.assign(validationLayers.begin(), validationLayers.end());
         }
 
@@ -144,10 +218,10 @@ class HelloTriangleApplication {
         return requiredLayers;
     }
 
-    static VKAPI_ATTR vk::Bool32 VKAPI_CALL debugCallback(vk::DebugUtilsMessageSeverityFlagBitsEXT severity,
+    static VKAPI_ATTR vk::Bool32 VKAPI_CALL debugCallback([[maybe_unused]] vk::DebugUtilsMessageSeverityFlagBitsEXT severity,
                                                           vk::DebugUtilsMessageTypeFlagsEXT type,
                                                           const vk::DebugUtilsMessengerCallbackDataEXT* pCallbackData,
-                                                          void* pUserData) {
+                                                          [[maybe_unused]] void* pUserData) {
         std::cerr << "validation layer: type " << to_string(type) << " msg: " << pCallbackData->pMessage << std::endl;
         return vk::False;
     }
@@ -156,7 +230,8 @@ class HelloTriangleApplication {
 
     vk::raii::Context context_;
     vk::raii::Instance instance_ = nullptr;
-    vk::raii::DebugUtilsMessengerEXT debugMessenger = nullptr;
+    vk::raii::DebugUtilsMessengerEXT debugMessenger_ = nullptr;
+    vk::raii::PhysicalDevice physicalDevice_ = nullptr;
 };
 
 int main() {
