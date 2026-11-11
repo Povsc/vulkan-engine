@@ -35,6 +35,7 @@ add_executable(vkrenderer
     src/app.cpp
     src/vulkan/instance.cpp
     src/vulkan/device.cpp
+    src/vulkan/surface.cpp
 )
 target_compile_features(vkrenderer PRIVATE cxx_std_20)
 target_compile_options(vkrenderer PRIVATE -Wall -Wextra -Wpedantic -Wshadow)

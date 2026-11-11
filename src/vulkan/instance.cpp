@@ -2,7 +2,7 @@
 
 #include "vulkan/config.hpp"
 
-#include <GLFW/glfw3.h>
+#include "glfw.hpp"
 
 #include <algorithm>
 #include <cstring>

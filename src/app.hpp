@@ -1,8 +1,6 @@
 #pragma once
 
-#define GLFW_INCLUDE_VULKAN
-#include <GLFW/glfw3.h>
-
+#include "glfw.hpp"
 #include "vulkan/vk.hpp"
 
 class HelloTriangleApplication {
@@ -21,6 +19,9 @@ class HelloTriangleApplication {
     vk::raii::Context context_;
     vk::raii::Instance instance_ = nullptr;
     vk::raii::DebugUtilsMessengerEXT debugMessenger_ = nullptr;
+    
+    vk::raii::SurfaceKHR surface_ = nullptr;
+
     vk::raii::PhysicalDevice physicalDevice_ = nullptr;
     vk::raii::Device device_ = nullptr;
     uint32_t graphicsFamilyIndex_ = 0;

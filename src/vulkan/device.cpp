@@ -80,16 +80,27 @@ vk::raii::PhysicalDevice pickPhysicalDevice(vk::raii::Instance& instance) {
     throw std::runtime_error("failed to find GPUs with Vulkan support!");
 }
 
-vk::raii::Device createLogicalDevice(vk::raii::PhysicalDevice& physicalDevice, uint32_t& graphicsFamilyIndex) {
+vk::raii::Device createLogicalDevice(vk::raii::PhysicalDevice& physicalDevice, vk::raii::SurfaceKHR& surface,
+    uint32_t& graphicsFamilyIndex) {
+
     std::vector<vk::QueueFamilyProperties> queueFamilyProperties = physicalDevice.getQueueFamilyProperties();
-    auto graphicsQueueFamilyProperty = std::ranges::find_if(queueFamilyProperties, [](auto const& qfp) {
-        return (qfp.queueFlags & vk::QueueFlagBits::eGraphics) != static_cast<vk::QueueFlags>(0);
-    });
-    if (graphicsQueueFamilyProperty == queueFamilyProperties.end()) {
-        throw std::runtime_error("failed to find a graphics queue family");
+
+    // get the first index into queueFamilyProperties which supports both graphics and present
+    uint32_t queueIndex = ~0;
+    for (uint32_t qfpIndex = 0; qfpIndex < queueFamilyProperties.size(); qfpIndex++)
+    {
+      if ((queueFamilyProperties[qfpIndex].queueFlags & vk::QueueFlagBits::eGraphics) &&
+          physicalDevice.getSurfaceSupportKHR(qfpIndex, *surface))
+      {
+        // found a queue family that supports both graphics and present
+        queueIndex = qfpIndex;
+        break;
+      }
     }
-    graphicsFamilyIndex =
-        static_cast<uint32_t>(std::distance(queueFamilyProperties.begin(), graphicsQueueFamilyProperty));
+    if (queueIndex == static_cast<uint32_t>(~0))
+    {
+      throw std::runtime_error("Could not find a queue for graphics and present -> terminating");
+    }
 
     // a little silly since only one queue
     const float queuePriority = 0.5f;

@@ -2,6 +2,7 @@
 
 #include "vulkan/device.hpp"
 #include "vulkan/instance.hpp"
+#include "vulkan/surface.hpp"
 
 constexpr uint32_t WINDOW_WIDTH = 800;
 constexpr uint32_t WINDOW_HEIGHT = 600;
@@ -23,8 +24,11 @@ void HelloTriangleApplication::initWindow() {
 void HelloTriangleApplication::initVulkan() {
     instance_ = createInstance(context_);
     debugMessenger_ = setupDebugMessenger(instance_);
+    surface_ = createSurface(instance_, window_);
+
+    // physical + logical device things
     physicalDevice_ = pickPhysicalDevice(instance_);
-    device_ = createLogicalDevice(physicalDevice_, graphicsFamilyIndex_);
+    device_ = createLogicalDevice(physicalDevice_, surface_, graphicsFamilyIndex_);
     graphicsQueue_ = device_.getQueue(graphicsFamilyIndex_, 0);
 }
 
