@@ -1,0 +1,9 @@
+{
+  "clangd.path": "C:/Program Files/LLVM/bin/clangd.exe",
+  "clangd.arguments": [
+    "--compile-commands-dir=${workspaceFolder}/build/win-clang-debug"
+  ],
+  "C_Cpp.intelliSenseEngine": "disabled",
+  "C_Cpp.autocomplete": "disabled",
+  "C_Cpp.errorSquiggles": "disabled"
+}

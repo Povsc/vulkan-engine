@@ -1,2 +1,4 @@
 CompileFlags:
   CompilationDatabase: build/win-clang-debug
+  Add:
+    - "-std=c++20"

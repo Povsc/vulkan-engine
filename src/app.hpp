@@ -22,4 +22,5 @@ class HelloTriangleApplication {
     vk::raii::Instance instance_ = nullptr;
     vk::raii::DebugUtilsMessengerEXT debugMessenger_ = nullptr;
     vk::raii::PhysicalDevice physicalDevice_ = nullptr;
+    vk::raii::Device device_ = nullptr;
 };

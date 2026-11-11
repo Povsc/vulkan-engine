@@ -7,8 +7,22 @@ include(Shaders)
 option(ENABLE_ASAN "Build with AddressSanitizer" OFF)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
+
+# clangd / editors often look at the source-tree root for compile_commands.json
+if(CMAKE_EXPORT_COMPILE_COMMANDS)
+    add_custom_target(copy_compile_commands ALL
+        COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+            "${CMAKE_BINARY_DIR}/compile_commands.json"
+            "${CMAKE_SOURCE_DIR}/compile_commands.json"
+        COMMENT "copy compile_commands.json -> source root"
+        VERBATIM
+    )
+endif()
+
 
 find_package(Vulkan 1.4.335 REQUIRED)
 find_package(glfw3 CONFIG REQUIRED)
