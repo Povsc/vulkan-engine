@@ -24,7 +24,8 @@ void HelloTriangleApplication::initVulkan() {
     instance_ = createInstance(context_);
     debugMessenger_ = setupDebugMessenger(instance_);
     physicalDevice_ = pickPhysicalDevice(instance_);
-    device_ = createLogicalDevice(physicalDevice_);
+    device_ = createLogicalDevice(physicalDevice_, graphicsFamilyIndex_);
+    graphicsQueue_ = device_.getQueue(graphicsFamilyIndex_, 0);
 }
 
 void HelloTriangleApplication::mainLoop() {

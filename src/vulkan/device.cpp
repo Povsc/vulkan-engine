@@ -80,18 +80,22 @@ vk::raii::PhysicalDevice pickPhysicalDevice(vk::raii::Instance& instance) {
     throw std::runtime_error("failed to find GPUs with Vulkan support!");
 }
 
-vk::raii::Device createLogicalDevice(vk::raii::PhysicalDevice& physicalDevice) {
+vk::raii::Device createLogicalDevice(vk::raii::PhysicalDevice& physicalDevice, uint32_t& graphicsFamilyIndex) {
     std::vector<vk::QueueFamilyProperties> queueFamilyProperties = physicalDevice.getQueueFamilyProperties();
     auto graphicsQueueFamilyProperty = std::ranges::find_if(queueFamilyProperties, [](auto const& qfp) {
         return (qfp.queueFlags & vk::QueueFlagBits::eGraphics) != static_cast<vk::QueueFlags>(0);
     });
-    auto graphicsIndex = static_cast<uint32_t>(std::distance(queueFamilyProperties.begin(), graphicsQueueFamilyProperty));
+    if (graphicsQueueFamilyProperty == queueFamilyProperties.end()) {
+        throw std::runtime_error("failed to find a graphics queue family");
+    }
+    graphicsFamilyIndex =
+        static_cast<uint32_t>(std::distance(queueFamilyProperties.begin(), graphicsQueueFamilyProperty));
 
     // a little silly since only one queue
     const float queuePriority = 0.5f;
 
     vk::DeviceQueueCreateInfo deviceQueueCreateInfo{
-        .queueFamilyIndex = graphicsIndex, .queueCount = 1, .pQueuePriorities = &queuePriority};
+        .queueFamilyIndex = graphicsFamilyIndex, .queueCount = 1, .pQueuePriorities = &queuePriority};
 
 
     // are any of these actually needed?

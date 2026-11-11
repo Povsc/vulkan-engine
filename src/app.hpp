@@ -23,4 +23,6 @@ class HelloTriangleApplication {
     vk::raii::DebugUtilsMessengerEXT debugMessenger_ = nullptr;
     vk::raii::PhysicalDevice physicalDevice_ = nullptr;
     vk::raii::Device device_ = nullptr;
+    uint32_t graphicsFamilyIndex_ = 0;
+    vk::raii::Queue graphicsQueue_ = nullptr;
 };
